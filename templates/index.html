@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Model Crafters - Machine Learning Model Training Hub</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+
+    <div class="container mt-5">
+        <h1 class="text-center">Machine Learning Model Training Hub</h1>
+
+        <div class="mb-3">
+            <label for="fileInput" class="btn btn-success rounded">Load Data File</label>
+            <input type="file" id="fileInput" accept=".csv" style="display: none" onchange="loadAndSaveData()">
+            <div id="fileSelectedMessage" style="display: none; margin-top: 10px; color: green;">File selected successfully!</div>
+        </div>
+
+        <div class="mb-3">
+            <select id="modelSelector" class="form-select">
+                <option value="">Choose Model</option>
+                <option value="svm">Apply SVM</option>
+                <option value="decisionTree">Apply Decision Tree</option>
+                <option value="logisticRegression">Apply Logistic Regression</option>
+                <option value="randomForest">Apply Random Forest</option>
+                <option value="kNearestNeighbor">Apply K-nearest Neighbor</option>
+            </select>
+            <button class="btn btn-primary mt-3" onclick="trainModel()">Train Model</button>
+        </div>
+
+        <div class="list-group">
+            <button class="list-group-item list-group-item-action" onclick="calculateMetric('confusion_matrix')">Calculate Confusion Matrix</button>
+            <button class="list-group-item list-group-item-action" onclick="calculateMetric('sensitivity')">Calculate Sensitivity</button>
+            <button class="list-group-item list-group-item-action" onclick="calculateMetric('specificity')">Calculate Specificity</button>
+            <button class="list-group-item list-group-item-action" onclick="calculateMetric('roc')">Calculate ROC</button>
+            <button class="list-group-item list-group-item-action" onclick="calculateMetric('auc')">Calculate AUC</button>
+        </div>
+
+        <div id="output" class="alert alert-secondary mt-3"></div>
+    </div>
+
+    <script>
+        function loadAndSaveData() {
+            const fileInput = document.getElementById('fileInput');
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    document.getElementById('fileSelectedMessage').style.display = 'block';
+                } else {
+                    alert(data.error);
+                }
+            })
+            .catch(error => alert('Error: ' + error));
+        }
+
+        function trainModel() {
+            const modelType = document.getElementById('modelSelector').value;
+            if (!modelType) {
+                alert('Please select a model!');
+                return;
+            }
+
+            fetch('/train', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model: modelType })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const output = document.getElementById('output');
+                if (data.message) {
+                    output.textContent = `${data.message} Training time: ${data.training_time.toFixed(2)} seconds.`;
+                    output.classList.add('alert-success');
+                } else {
+                    output.textContent = data.error;
+                    output.classList.add('alert-danger');
+                }
+            })
+            .catch(error => alert('Error: ' + error));
+        }
+
+        function calculateMetric(metric) {
+            fetch(`/metrics?metric=${metric}`)
+            .then(response => response.json())
+            .then(data => {
+                const output = document.getElementById('output');
+                if (data.result) {
+                    output.textContent = JSON.stringify(data.result, null, 2);
+                    output.classList.add('alert-info');
+                } else {
+                    output.textContent = data.error;
+                    output.classList.add('alert-danger');
+                }
+            })
+            .catch(error => alert('Error: ' + error));
+        }
+    </script>
+</body>
+</html>
